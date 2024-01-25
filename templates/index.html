@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot UI</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+    
+        .chat-container {
+            max-width: 500px;
+            /* height: 400px; */
+            margin: 50px auto;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+    
+        .chat-header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px;
+            text-align: center;
+        }
+    
+        .chat-body {
+            padding: 10px;
+            overflow-y: auto;
+        }
+    
+        .chat-input-container {
+            display: flex;
+            flex-direction: column; /* Change to column layout */
+            align-items: center;
+            justify-content: center;
+            border-top: 1px solid #ccc;
+            padding: 10px; /* Add padding for better spacing */
+        }
+    
+        .chat-input {
+            flex: 1;
+            padding: 10px;
+            border: 1px;
+            box-sizing: border-box;
+            width: calc(100% - 20px); /* Adjust the width as needed */
+            height: 150px; /* Adjust the height as needed */
+            margin-top: 20px; /* Adjust the margin-top as needed */
+        }
+    
+        .voice-search-button {
+            background-color: rgb(73, 193, 59);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            padding: 10px;
+            margin-top: 10px; /* Adjust the margin-top as needed */
+            cursor: pointer;
+        }
+    
+        .message-container {
+            margin-bottom: 10px;
+            box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.1);
+        }
+    
+        .user-message {
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 8px;
+            padding: 5px 10px;
+            display: inline-block;
+            max-width: 80%;
+        }
+    
+        .bot-message {
+            background-color: #f4f4f4;
+            border-radius: 8px;
+            padding: 5px 10px;
+            display: inline-block;
+            max-width: 80%;
+        }
+    
+        .label-you, .label-bot {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+    
+        .message-container .message:hover {
+            box-shadow: 0px 2px 5px 0px rgba(0, 0, 0, 0.1);
+            transition: box-shadow 0.3s ease;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 30%;
+            background: rgba(243, 249, 239, 0.7); /* Adjust the alpha channel for transparency */
+            justify-content: center;
+            align-items: center;
+            z-index: 1;
+        }
+
+        .modal-content {
+            text-align: center;
+            color: rgb(238, 242, 238);
+            padding: 20px;
+            background: #10ae0a; /* Background color of the modal */
+            border-radius: 10px; /* Adjust the border radius for rounded corners */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+    </style>
+    
+
+</head>
+<body>
+
+<div class="chat-container">
+    <div class="chat-header">
+        <b>Cricket World Cup 2023 Question Answere Chat Bot </b>
+    </div>
+    <div class="chat-body" id="chatBody">
+        <div class="message-container">
+        </div>
+        <div class="message-container">
+            <div class="label-bot">ChatBot</div>
+            <div class="bot-message">Hi there! Ask anything about Cricket World Cup 2023.</div>
+        </div>
+    </div>
+    <div class="chat-input-container">
+        <input type="text" id="userInput" class="chat-input" placeholder="Type your message...">
+        <button class="voice-search-button" onclick="startVoiceSearch()"> <b style="color: white;">Speak .. </b>
+            🎙️
+        </button>
+    </div>
+    <div id="listeningModal" class="modal">
+        <div class="modal-content">
+            <p>Listening...</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('userInput').addEventListener('keyup', function (event) {
+        if (event.key === 'Enter') {
+            sendMessage();
+        }
+    });
+
+    function sendMessage() {
+        var userInput = document.getElementById('userInput');
+        var userMessage = userInput.value;
+
+        if (userMessage.trim() === '') {
+            return;
+        }
+
+        appendMessage('You', userMessage);
+
+        // You can implement your chatbot logic here
+
+        fetch('/qna', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 'question': userMessage }),
+        })
+
+        .then(response => response.json())
+        .then(data => {
+            var botMessage = data['message'];
+            appendMessage('ChatBot', botMessage);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+
+
+        userInput.value = '';
+    }
+    function appendMessage(sender, message) {
+        var chatBody = document.getElementById('chatBody');
+        var messageContainer = document.createElement('div');
+        var label = document.createElement('div');
+        var messageElement = document.createElement('div');
+
+        messageContainer.className = 'message-container';
+
+        label.className = sender === 'You' ? 'label-you' : 'label-bot';
+        label.textContent = sender;
+
+        if (sender === 'You') {
+            messageElement.className = 'user-message';
+        } else {
+            messageElement.className = 'bot-message';
+        }
+
+        messageElement.textContent = message;
+
+        messageContainer.appendChild(label);
+        messageContainer.appendChild(messageElement);
+
+        chatBody.appendChild(messageContainer);
+
+        // Scroll to the bottom to show the latest message
+        chatBody.scrollTop = chatBody.scrollHeight;
+    }
+
+    var socket = io.connect('http://' + document.domain + ':' + location.port);
+
+    function startVoiceSearch() {
+        socket.emit('voice_search');
+        var modal = document.getElementById('listeningModal');
+        modal.style.display = 'block';
+    }
+
+    socket.on('voice_search_response', function(data) {
+        
+        if (data.end_of_conversation){
+            var modal = document.getElementById('listeningModal');
+            modal.style.display = 'none';
+            const event = new KeyboardEvent('keydown', { key: 'Enter' });
+            document.querySelector('input').dispatchEvent(event);
+        }
+        else if (data.end_of_conversation2){
+            alert('there is some error please try again ... ')
+            var modal = document.getElementById('listeningModal');
+            modal.style.display = 'none';
+        }
+        else {
+
+        console.log(data)
+        var textBox = document.getElementById('userInput');
+        textBox.value += ' ' + data;
+        document.getElementById('userInput').value = textBox.value;
+        }
+    });
+</script>
+
+</body>
+</html>
